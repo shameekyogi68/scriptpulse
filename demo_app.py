@@ -57,6 +57,7 @@ st.markdown("""
         padding: 20px;
         border-radius: 4px;
         margin-bottom: 24px;
+        color: #333333;
     }
 
     .sidebar-panel {
