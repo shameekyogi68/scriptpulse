@@ -19,45 +19,66 @@ from scriptpulse.engine.temporal_graph import build_temporal_graph
 # --- CONFIGURATION & STYLING ---
 st.set_page_config(page_title="ScriptPulse", page_icon="📝", layout="wide")
 
-# Custom CSS for "Writer Cognition" UX
+# Custom CSS for "Cinematic Professional" UI
 st.markdown("""
     <style>
+    /* Main Background adjustments are simplified as Streamlit controls theme mostly, 
+       but we can style our containers to be 'Card-like' or 'Panel-like' */
+    
+    .professional-card {
+        background-color: #f8f9fa; /* Light gray for cleanliness, or dark if dark mode enabled? Keeping light/neutral for safety */
+        border-left: 4px solid #6c757d; /* Neutral accent */
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+    }
+    
     .focus-card {
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 15px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border-radius: 4px;
+        padding: 24px;
+        margin-bottom: 16px;
     }
-    .focus-header {
-        font-weight: 600;
-        color: #d9534f;
-        font-size: 1.1em;
-        margin-bottom: 10px;
-    }
-    .metric-arrow-up { color: #d9534f; font-weight: bold; }
-    .metric-arrow-down { color: #5cb85c; font-weight: bold; }
-    .metric-arrow-flat { color: #777; font-weight: bold; }
     
-    .start-here-box {
-        background-color: #f0f8ff;
-        border-left: 5px solid #007bff;
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 25px;
+    .focus-header {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-weight: 600;
+        color: #333;
+        font-size: 1.05em;
+        margin-bottom: 8px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 8px;
     }
-    .sticky-note {
-        background-color: #fff3cd;
-        border: 1px solid #ffeeba;
-        color: #856404;
+
+    .overview-box {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        padding: 20px;
+        border-radius: 4px;
+        margin-bottom: 24px;
+    }
+
+    .sidebar-panel {
+        background-color: #f1f3f5;
         padding: 15px;
-        border-radius: 5px;
+        border-radius: 4px;
         font-size: 0.9em;
+        color: #495057;
+        margin-bottom: 20px;
     }
-    .summary-green { color: #155724; background-color: #d4edda; padding: 10px; border-radius: 5px; }
-    .summary-yellow { color: #856404; background-color: #fff3cd; padding: 10px; border-radius: 5px; }
-    .summary-red { color: #721c24; background-color: #f8d7da; padding: 10px; border-radius: 5px; }
+    
+    .metric-label {
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6c757d;
+    }
+    
+    .status-text-normal { color: #495057; font-weight: 500; }
+    .status-text-alert { color: #b71c1c; font-weight: 600; }
+    
+    hr { margin-top: 10px; margin-bottom: 10px; border-top: 1px solid #eee; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -65,56 +86,55 @@ st.markdown("""
 with st.sidebar:
     st.header("ScriptPulse v1.3.1")
     st.markdown("---")
+    
+    # Neutral Sidebar Panel
     st.markdown("""
-    <div class="sticky-note">
-        <strong>🚫 ScriptPulse is NOT</strong>
-        <ul>
-            <li>grading your script</li>
-            <li>judging quality</li>
-            <li>telling you what to change</li>
-        </ul>
-        <strong>✅ It IS</strong>
-        <ul>
-            <li>showing how structure behaves over time</li>
-            <li>mirroring pressure vs. relief</li>
-        </ul>
+    <div class="sidebar-panel">
+        <strong>What ScriptPulse Does</strong>
+        <p style="margin-top:5px; margin-bottom:10px;">
+        • Observes how structural pressure builds over time<br>
+        • Highlights sections with sustained demand
+        </p>
+        <strong>What ScriptPulse Does Not Do</strong>
+        <p style="margin-top:5px; margin-bottom:0;">
+        • Judge quality<br>
+        • Evaluate creativity<br>
+        • Suggest changes
+        </p>
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("---")
     view_mode = st.radio("View Mode", ["Writer View", "Technical View"], index=0)
 
 # --- HELPER FUNCTIONS ---
-def get_arrow(curr, prev):
-    if prev is None: return "⏺"
-    if curr > prev * 1.05: return "↑ Pressure Increases"
-    if curr < prev * 0.95: return "↓ Pressure Releases"
-    return "→ Pressure Holds"
+def get_arrow_text(curr, prev):
+    if prev is None: return "Initial Scene"
+    if curr > prev * 1.05: return "Pressure Increasing"
+    if curr < prev * 0.95: return "Pressure Releasing"
+    return "Pressure Holding"
 
-def get_structural_summary(alert_count, total_scenes):
-    if total_scenes == 0: return ("⚪", "No scenes detected.")
-    ratio = alert_count / total_scenes
+def get_structural_summary_text(alert_count, total_scenes):
+    if total_scenes == 0: return "No scenes detected.", "status-text-normal"
+    
     if alert_count == 0:
-        return ("green", "The structure provides the audience with natural breathing room throughout.")
-    elif ratio < 0.2:
-        return ("yellow", "Pressure builds steadily, with some specific moments demanding attention.")
+        return "The structure provides the audience with natural breathing room.", "status-text-normal"
     else:
-        return ("red", "Extended pressure appears frequently without structural relief.")
+        return "The script pushes the audience continuously in specific sections without a clear structural break.", "status-text-alert"
 
 # --- MAIN APP LAYOUT ---
 
-# 1. Start Here Entry Point
+# 1. Overview (Renamed from "Start Here")
 st.title("ScriptPulse")
 st.markdown("""
-<div class="start-here-box">
-    <h4>👋 Start Here</h4>
-    <p>ScriptPulse looks at how long and how intensely the audience is asked to stay engaged without relief.
-    You don’t need to fix anything. Just notice <strong>where pressure builds or releases.</strong></p>
+<div class="overview-box">
+    <h4 style="margin-top:0;">Overview</h4>
+    <p>ScriptPulse observes how long the audience is asked to remain engaged without relief. 
+    Use this view to notice where pressure accumulates or releases.</p>
 </div>
 """, unsafe_allow_html=True)
 
 # 2. Input
-input_col, help_col = st.columns([2, 1])
+input_col, space_col = st.columns([2, 1])
 with input_col:
     paste_input = st.text_area("Screenplay Text", height=200, placeholder="Paste your scene here...")
     file_input = st.file_uploader("Or upload .txt", type=["txt"])
@@ -128,8 +148,7 @@ if st.button("Analyze Structure", type="primary"):
         st.warning("Please provide a script to analyze.")
     else:
         try:
-            # --- ENGINE EXECUTION (VISUALIZATION DATA) ---
-            # Replicating run_scriptpulse logic locally for data access
+            # --- ENGINE EXECUTION ---
             validate_script(input_lines)
             clean_lines = preprocess_lines(input_lines)
             scenes = segment_scenes(clean_lines)
@@ -172,46 +191,52 @@ if st.button("Analyze Structure", type="primary"):
                 try: alert_indices.append(int(msg.strip('.').split(' ')[-1]))
                 except: pass
             
-            # --- WRITER COGNITION UI ---
+            # --- WRITER COGNITION UI (REFINED) ---
+            st.divider()
 
             # 3. Structural Summary
-            color, summary_text = get_structural_summary(len(alert_indices), len(scenes))
-            st.markdown(f'<div class="summary-{color}"><strong>Structural Summary:</strong> {summary_text}</div>', unsafe_allow_html=True)
-            st.write("")
-
+            summary, status_class = get_structural_summary_text(len(alert_indices), len(scenes))
+            st.markdown(f'<div class="{status_class}" style="font-size:1.1em; margin-bottom:20px;">{summary}</div>', unsafe_allow_html=True)
+            
             if view_mode == "Writer View":
-                # 4. Audience Energy Timeline (Writer Friendly)
-                st.subheader("Audience Energy Load")
-                st.caption("How demanding the structure is over time.")
+                # 4. Audience Energy Timeline
+                st.caption("AUDIENCE ENERGY LOAD")
                 
                 fig, ax = plt.subplots(figsize=(12, 3))
-                ax.plot(decayed, color='#555', linewidth=1.5)
-                ax.fill_between(range(len(decayed)), decayed, color='#e0e0e0', alpha=0.4)
+                # Cinematic styling: minimalist
+                ax.plot(decayed, color='#333333', linewidth=1.2)
+                ax.fill_between(range(len(decayed)), decayed, color='#e0e0e0', alpha=0.3)
                 
-                # Markers
+                # Markers for alerts (Subtle red dots)
                 if alert_indices:
                     vals = [decayed[i] for i in alert_indices]
-                    ax.scatter(alert_indices, vals, color='#d9534f', s=60, zorder=5, label='Focus Point')
+                    ax.scatter(alert_indices, vals, color='#b71c1c', s=30, zorder=5, label='Alert')
                 
                 ax.set_yticks([])
                 ax.set_xticks(range(len(scenes)))
-                ax.set_xticklabels([str(i) for i in range(len(scenes))], fontsize=8)
-                ax.spines['top'].set_visible(False)
-                ax.spines['right'].set_visible(False)
-                ax.spines['left'].set_visible(False)
-                ax.set_ylabel("Pressure")
-                ax.set_xlabel("Scene Index")
+                ax.set_xticklabels([str(i) for i in range(len(scenes))], fontsize=8, color='#666')
+                
+                # Remove borders
+                for spine in ax.spines.values():
+                    spine.set_visible(False)
+                ax.spines['bottom'].set_visible(True)
+                ax.spines['bottom'].set_color('#ddd')
+                
+                ax.set_ylabel("Pressure", fontsize=9, color='#666')
+                ax.set_xlabel("Scene Index", fontsize=9, color='#666')
                 st.pyplot(fig)
 
-                # 5. Focus Points (Scene Cards)
-                st.subheader("Focus Points")
+                # 5. Focus Points (Typography-based)
+                st.write("")
+                st.caption("FOCUS POINTS")
+                
                 if not alert_indices:
-                    st.info("🟢 No specific scenes require structural focus. The pacing feels naturally varied.")
+                    st.markdown("<p style='color:#666;'>No specific scenes require structural focus.</p>", unsafe_allow_html=True)
                 else:
                     for i in alert_indices:
                         prev_eff = decayed[i-1] if i > 0 else 0
                         curr_eff = decayed[i]
-                        arrow = get_arrow(curr_eff, prev_eff)
+                        arrow_txt = get_arrow_text(curr_eff, prev_eff)
                         
                         header = scenes[i].header.strip()
                         
@@ -228,46 +253,44 @@ if st.button("Analyze Structure", type="primary"):
                         with st.container():
                             st.markdown(f"""
                             <div class="focus-card">
-                                <div class="focus-header">📍 Focus Point: Scene {i} <span style="color:#333; font-weight:normal; font-size:0.8em">({header})</span></div>
-                                <p><strong>Context:</strong> {arrow}</p>
-                                <p><strong>Why this stands out (Descriptive):</strong></p>
-                                <ul>
-                                    <li>{"</li><li>".join(obs)}</li>
-                                    <li>Contributes to sustained structural pressure</li>
-                                </ul>
-                                <hr style="margin: 10px 0;">
-                                <p style="font-size:0.9em; color:#555;"><em>Questions to ask yourself:</em></p>
-                                <ul style="font-size:0.9em; color:#555;">
-                                    <li>Do I want the audience to stay under pressure this long?</li>
-                                    <li>Is this repetition intentional?</li>
-                                    <li>Would a structural shift (shorter sentences, break in pattern) help here?</li>
-                                </ul>
+                                <div class="focus-header">Scene {i}: {header}</div>
+                                <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-size:0.9em; color:#555;">
+                                    <span><strong>Context:</strong> {arrow_txt}</span>
+                                </div>
+                                <div style="margin-bottom:15px;">
+                                    <span class="metric-label">Observation</span><br>
+                                    <ul>
+                                        <li>{"</li><li>".join(obs)}</li>
+                                        <li>Contributes to sustained structural pressure</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <span class="metric-label">Inquiry</span><br>
+                                    <span style="font-size:0.95em; color:#444;">
+                                    Do I want the audience to stay under pressure this long? Is this repetition intentional?
+                                    </span>
+                                </div>
                             </div>
                             """, unsafe_allow_html=True)
 
             else:
-                # Technical View (Original functionality + extras)
+                # Technical View
                 st.subheader("Technical Analysis")
                 st.write(f"**Total Scenes:** {len(scenes)}")
                 
-                # Raw Alerts
                 if messages:
                     for m in messages:
-                        st.warning(m)
+                        st.text(f"• {m}")
                 else:
-                    st.success("No alerts triggers.")
+                    st.text("• No strain detected.")
                 
-                # Plots
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.write("**Raw Effort**")
+                    st.caption("RAW EFFORT")
                     st.line_chart(effort)
                 with col2:
-                    st.write("**Accumulated Strain**")
+                    st.caption("ACCUMULATED STRAIN")
                     st.line_chart(decayed)
-                
-                with st.expander("Raw Feature Data"):
-                    st.json(features[:3]) # Show first 3 for debugging
 
         except ValueError as ve:
              st.error(f"Validation Error: {ve}")
